@@ -6,12 +6,16 @@
  * @module
  */
 
-// deno-fmt-ignore
-/** Delimiters that may be escaped inside translation expressions. @internal */
+/**
+ * Delimiters that may be escaped inside translation expressions.
+ * @internal
+ */
 const ESCAPABLE_DELIMITER = /\\([\\,:|{}])/g;
 
-// deno-fmt-ignore
-/** Supported plural variant counts. @internal */
+/**
+ * Supported plural variant counts.
+ * @internal
+ */
 const PLURAL_VARIANT_COUNTS = new Set([1, 2, 3, 6]);
 
 /** A syntax error found while parsing a translation message. */
@@ -359,13 +363,25 @@ function unescapeSyntax(value: string): string {
   return value.replace(ESCAPABLE_DELIMITER, '$1');
 }
 
-/** The bounds and content of a scanned translation expression. @internal */
+/**
+ * The bounds and content of a scanned translation expression.
+ * @internal
+ */
 interface ParsedExpression {
-  /** Expression content without its outer braces. @internal */
+  /**
+   * Expression content without its outer braces.
+   * @internal
+   */
   content: string;
-  /** Index immediately after the expression. @internal */
+  /**
+   * Index immediately after the expression.
+   * @internal
+   */
   end: number;
-  /** Whether the expression used plural double braces. @internal */
+  /**
+   * Whether the expression used plural double braces.
+   * @internal
+   */
   plural: boolean;
 }
 

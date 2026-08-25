@@ -10,7 +10,7 @@ The project is designed around three areas described in the README:
 - **CLI:** compiles JSON translations into TypeScript typings and downloads self-hosted translations from the Explorer into local assets.
 - **Explorer:** a self-hosted frontend and backend for viewing, creating, editing, deleting, and caching translations.
 
-Not every planned area is implemented in this checkout. Do not invent runtime, CLI, or Explorer behavior that is not represented by source or tests. The current publishable module includes the translation text parser, which converts message syntax into structured text, parameter, plural, formatter, and switch-case parts.
+Not every planned area is implemented in this checkout. Do not invent CLI or Explorer behavior that is not represented by source or tests. The current publishable module includes the typed runtime and translation text parser. The runtime loads locale resources, resolves fallbacks, renders parameters, plurals, formatters, and switch cases, validates JavaScript usage, and can synchronize resources with a remote endpoint.
 
 The root `deno.jsonc` defines a workspace with two members:
 
@@ -42,12 +42,13 @@ Do not grant `-A` to routine commands. Add only the narrowest permission require
 ## Source and API conventions
 
 - `module/mod.ts` is the only public package entry point. Export intentional public APIs there; do not expose internal helpers accidentally.
-- Prefix internal implementation files with `_`, as in `_api.ts`, `_logging.ts`, and `_reactive_node.ts`.
+- Prefix genuinely internal implementation files with `_`; public source modules such as `runtime.ts`, `runtime_types.ts`, and `parser.ts` use descriptive names.
 - Keep tests beside their implementation and name them `*_test.ts`.
 - Use explicit `.ts` extensions for relative imports and use import-map aliases for JSR dependencies.
+- Use only one import declaration per module specifier. Combine runtime values and types in the same declaration with inline `type` modifiers, such as `import { createI18n, type I18n } from './mod.ts';`.
 - Preserve strict TypeScript types. Avoid `any`, non-null assertions, unchecked casts, and broad `Function` types unless the mapping genuinely requires them and the lint suppression explains why.
 - Use two-space indentation, single quotes, 100-column TypeScript formatting, and Deno's formatter. Markdown uses `proseWrap: never`.
-- Begin every TypeScript source file with the exact copyright header below, followed by a descriptive module-level JSDoc block containing `@module`. Describe the file's purpose rather than repeating its filename. For test files just do the copyright header and a space after.
+- Begin every TypeScript source file with the exact copyright header below, followed by a descriptive module-level JSDoc block containing `@module`. Describe the file's purpose rather than repeating its filename. For test and mod files just do the copyright header and a space after.
 
   ```ts
   // Copyright the Deft+ authors. All rights reserved. Apache-2.0 license
@@ -65,7 +66,7 @@ Do not grant `-A` to routine commands. Add only the narrowest permission require
 - Format every template tag as `@template T - Description.` and every parameter tag as `@param value - Description.`. The dash after the template or parameter name is required.
 - Format return tags as `@returns Description.` without a dash after `@returns`.
 - Keep JSDoc for internal functions simple and normally omit examples. Document their parameters and returns when present, then add `@internal` as the final tag, separated from `@returns` or the preceding content by one blank JSDoc line.
-- Give every top-level constant a very short, single-line JSDoc comment. Mark an internal constant in that same line, for example `/** Matches parameter expressions. @internal */`.
+- Give every top-level constant a very short JSDoc comment. Internal constants must use a multiline comment with the description and `@internal` on separate lines; never append `@internal` to a single-line JSDoc comment.
 - Document every class and interface, including each method and property. Use concise one-line JSDoc for self-explanatory members and complete external API JSDoc for members whose behavior consumers need to understand. End internal members with `@internal` following the same spacing rule.
 
   ````ts
