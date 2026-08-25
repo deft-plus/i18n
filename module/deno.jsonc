@@ -3,7 +3,17 @@
   "name": "@deft-plus/i18n",
   "version": "0.1.0",
   "description": "🌍 A lightweight i18n framework powered by signals, enabling dynamic, reactive translations for seamless multilingual experiences.",
-  "keywords": ["deno", "signal", "store", "reactive", "reactivity", "i18n", "language", "global"],
+  "keywords": [
+    "deno",
+    "signal",
+    "store",
+    "reactive",
+    "reactivity",
+    "i18n",
+    "language",
+    "global",
+    "internationalization"
+  ],
   "license": "Apache-2.0",
   "author": "Deft+",
   "homepage": "https://github.com/deft-plus/i18n#README.md",
@@ -12,9 +22,9 @@
     "url": "git+https://github.com/deft-plus/i18n.git"
   },
   "imports": {
-    "@std/async": "jsr:@std/async@^1.0.6",
-    "@std/expect": "jsr:@std/expect@^1.0.5",
-    "@std/testing": "jsr:@std/testing@^1.0.3"
+    "@std/async": "jsr:@std/async@^1.5.0",
+    "@std/expect": "jsr:@std/expect@^1.0.20",
+    "@std/testing": "jsr:@std/testing@^1.0.20"
   },
   "exports": {
     ".": "./mod.ts"
