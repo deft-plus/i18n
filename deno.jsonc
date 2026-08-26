@@ -3,8 +3,8 @@
     "lint": "deno lint && deno fmt --check",
     "fmt": "deno fmt",
     "check": "deno check module/mod.ts module/**/*_test.ts",
-    "test": "deno test --coverage=.coverage module && deno coverage --threshold=100 .coverage",
-    "test:u": "deno test --coverage=.coverage module -- -u && deno coverage --threshold=100 .coverage",
+    "test": "deno test --allow-read=. --allow-write=. --coverage=.coverage module && deno coverage --threshold=100 .coverage",
+    "test:u": "deno test --allow-read=. --allow-write=. --coverage=.coverage module -- -u && deno coverage --threshold=100 .coverage",
     "jsdoc:generate": "rm -rf .deno-docs && deno doc --html --output=./.deno-docs module/**/*.ts",
     "jsdoc:lint": "deno doc --lint module/*.ts"
   },

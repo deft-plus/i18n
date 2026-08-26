@@ -2,15 +2,15 @@
 
 [![JSR](https://jsr.io/badges/@deft-plus/i18n)](https://jsr.io/@deft-plus/i18n) [![JSR Score](https://jsr.io/badges/@deft-plus/i18n/score)](https://jsr.io/@deft-plus/i18n)
 
-`@deft-plus/i18n` is a dependency-free, strongly typed internationalization runtime for frontend, backend, API, and server-rendered TypeScript applications.
+`@deft-plus/i18n` provides a dependency-free, strongly typed internationalization runtime and a Cliffy-powered synchronization CLI for frontend, backend, API, and server-rendered TypeScript applications.
 
 The wider project is designed around three areas:
 
 - **Runtime:** loads locale resources and renders type-safe translations.
-- **CLI:** will download resources and generate TypeScript declarations and loaders.
+- **CLI:** downloads resources and generates TypeScript declarations and an isolated runtime factory.
 - **Explorer:** will manage locales, namespaces, translation keys, and values through a self-hosted API and interface.
 
-The runtime and translation text parser are currently implemented. The CLI and Explorer remain planned work.
+The runtime, translation text parser, shared project configuration, and synchronization CLI are implemented. The Explorer remains planned work.
 
 ## Installation
 
@@ -26,9 +26,129 @@ Or add it to an npm project through JSR:
 npx jsr add @deft-plus/i18n
 ```
 
+Add a project-local task to `deno.json` or `deno.jsonc`. The task runs the CLI export from the installed dependency, so it uses the version selected by the project configuration and `deno.lock`:
+
+```jsonc
+{
+  "tasks": {
+    "i18n": "deno --allow-read=. --allow-write=. --allow-net=example.com @deft-plus/i18n/cli"
+  }
+}
+```
+
+Replace `example.com` with the hostname used by `sync.endpoint`. Run CLI commands through the task:
+
+```bash
+deno task i18n sync
+deno task i18n --version
+deno task i18n -v
+```
+
+Installing the package with `deno add` does not create a global executable. If a global `i18n` command is preferred, install the CLI export separately with the permissions required to discover configuration, write generated files, and contact the configured endpoint:
+
+```bash
+deno install --global --name i18n --allow-read --allow-write --allow-net jsr:@deft-plus/i18n/cli
+```
+
+The global installation allows `i18n sync`, `i18n --version`, and `i18n -v` without `deno task`.
+
+## Shared project configuration
+
+The CLI discovers one shared Deft+ configuration by searching upward from the current directory. It supports `deft.config.ts`, `.mts`, `.cts`, `.js`, `.mjs`, and `.cjs` in that order. Pass `--config` to use any explicit configuration path.
+
+The default export is a plain object. No `defineConfig` wrapper is required:
+
+```ts
+import { i18n } from '@deft-plus/i18n/config';
+
+export default {
+  plugins: [
+    i18n({
+      defaultLocale: 'en',
+      output: './.translations',
+      sync: {
+        endpoint: 'https://example.com/api/i18n',
+        interval: 60_000,
+      },
+      fallbacks: {
+        es: ['en'],
+        default: ['en'],
+      },
+      formatters: {
+        currency: (value: number, { locale }) =>
+          new Intl.NumberFormat(locale, {
+            style: 'currency',
+            currency: 'USD',
+          }).format(value),
+      },
+      types: {
+        userId: (value): value is number => typeof value === 'number',
+      },
+      validation: 'throw',
+    }),
+  ],
+};
+```
+
+Other Deft+ plugins can be added to the same `plugins` array in the future. The i18n plugin does not create a runtime or perform network work while defining the configuration.
+
+The generated runtime imports this shared configuration to reuse formatter and validator functions. Keep its top-level code side-effect free and compatible with every environment where the runtime is bundled. Do not place server secrets in configuration that may reach browser code.
+
+## Synchronizing resources
+
+Run synchronization through the project-local task from anywhere beneath the project configuration:
+
+```bash
+deno task i18n sync
+deno task i18n sync --config ./configuration/deft.config.mjs
+```
+
+The equivalent commands are `i18n sync` and `i18n sync --config ...` when the optional global executable is installed.
+
+The CLI sends a `GET` request to `sync.endpoint`. The response must contain a complete locale snapshot:
+
+```json
+{
+  "resources": {
+    "en": {
+      "common": {
+        "greeting": "Hello {name:userId}"
+      }
+    },
+    "es": {
+      "common": {
+        "greeting": "Hola {name:userId}"
+      }
+    }
+  }
+}
+```
+
+Before replacing existing output, the CLI validates the default locale, fallback locales, resource structure, message syntax, custom parameter types, and formatter references. Successful synchronization writes deterministic generated artifacts atomically:
+
+```text
+.translations/
+├── manifest.json
+├── resources.generated.ts
+├── runtime.generated.ts
+└── resources/
+    ├── en.json
+    └── es.json
+```
+
+Create the application runtime from the generated SSR-safe factory:
+
+```ts
+import { createI18n } from './.translations/runtime.generated.ts';
+
+export const i18n = createI18n();
+```
+
+Call the factory per request when SSR locale state must be isolated.
+
 ## Translation schema
 
-The future CLI will generate module augmentation describing every namespace, key, message, and custom parameter type. It can also be written manually:
+The CLI generates module augmentation describing every namespace, key, message, and custom parameter type. It can also be written manually:
 
 ```ts
 declare module '@deft-plus/i18n' {
@@ -54,7 +174,7 @@ Message literal types determine each generated translation function's parameter 
 
 ## Creating a runtime
 
-Resources are grouped by locale and then namespace. A locale can be an inline resource or an asynchronous loader generated by the future CLI.
+Resources are grouped by locale and then namespace. A locale can be an inline resource or an asynchronous loader.
 
 ```ts
 import { createI18n } from '@deft-plus/i18n';

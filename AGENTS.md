@@ -11,10 +11,10 @@ This repository contains a Deno 2.9+ TypeScript internationalization library pub
 The project is designed around three areas:
 
 - **Runtime:** loads translations, tracks the active locale, and exposes the `i18n` API used by applications.
-- **CLI:** will compile JSON translations into TypeScript typings and download translations from the Explorer into local assets.
+- **CLI:** downloads Explorer resources and generates JSON translations, TypeScript declarations, and an isolated runtime factory.
 - **Explorer:** will provide a self-hosted frontend and backend for managing and caching translations.
 
-Do not invent CLI or Explorer behavior that is not represented by source or tests. The current publishable package includes the typed runtime and translation text parser. The runtime loads locale resources, resolves fallbacks, renders parameters, plurals, formatters, and switch cases, validates JavaScript usage, and can synchronize resources with a remote endpoint.
+Do not invent Explorer behavior that is not represented by source or tests. The current publishable package includes the typed runtime, translation text parser, shared Deft+ configuration plugin, and synchronization CLI. The runtime loads locale resources, resolves fallbacks, renders parameters, plurals, formatters, and switch cases, validates JavaScript usage, and can synchronize resources with a remote endpoint. The CLI discovers `deft.config` files, validates full Explorer snapshots, and atomically generates typed runtime resources.
 
 ### Translation parser invariants
 
@@ -32,6 +32,8 @@ Do not invent CLI or Explorer behavior that is not represented by source or test
 - Keep the runtime focused on loading translations, selecting locales, and resolving type-safe messages. Normal application execution must not depend on Explorer availability.
 - Treat generated translation typings as deterministic CLI build artifacts. Never weaken translation keys or parameter types.
 - Keep downloaded translation assets usable without network access.
+- Keep shared configuration discovery centralized in `CONFIG_FILENAMES`; supported defaults are `deft.config.ts`, `.mts`, `.cts`, `.js`, `.mjs`, and `.cjs`, with explicit paths supported by the CLI.
+- Keep generated artifact names stable: `resources.generated.ts`, `runtime.generated.ts`, `manifest.json`, and the `resources/` JSON directory.
 - Treat Explorer data as untrusted. Validate locale identifiers, translation keys, message syntax, and persisted values at the backend boundary.
 - Keep message syntax consistent across the runtime, CLI, and Explorer. Parser changes require checking every implemented producer and consumer.
 

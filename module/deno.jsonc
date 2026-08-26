@@ -22,11 +22,15 @@
     "url": "git+https://github.com/deft-plus/i18n.git"
   },
   "imports": {
+    "@cliffy/command": "jsr:@cliffy/command@^1.2.1",
     "@std/async": "jsr:@std/async@^1.5.0",
     "@std/expect": "jsr:@std/expect@^1.0.20",
+    "@std/path": "jsr:@std/path@^1.1.6",
     "@std/testing": "jsr:@std/testing@^1.0.20"
   },
   "exports": {
-    ".": "./mod.ts"
+    ".": "./mod.ts",
+    "./cli": "./cli.ts",
+    "./config": "./config.ts"
   }
 }
