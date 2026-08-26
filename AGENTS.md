@@ -1,158 +1,241 @@
-# i18n contributor instructions
+# Contributor instructions
 
-## Project overview
+<!-- ====================================================================== -->
+<!-- PROJECT-SPECIFIC INSTRUCTIONS: replace or delete this entire section. -->
+<!-- ====================================================================== -->
 
-This repository contains `@deft-plus/i18n`, a Deno 2.9+ TypeScript internationalization library published to JSR. It aims to provide type-safe translations and locale-aware message handling while remaining usable directly from TypeScript without a build step.
+## Project: `@deft-plus/i18n`
 
-The project is designed around three areas described in the README:
+This repository contains a Deno 2.9+ TypeScript internationalization library published to JSR. It provides type-safe translations and locale-aware message handling directly from TypeScript without a build step.
 
-- **Runtime:** loads translations, tracks the active locale, and exposes the main `i18n` API used by applications.
-- **CLI:** compiles JSON translations into TypeScript typings and downloads self-hosted translations from the Explorer into local assets.
-- **Explorer:** a self-hosted frontend and backend for viewing, creating, editing, deleting, and caching translations.
+The project is designed around three areas:
 
-Not every planned area is implemented in this checkout. Do not invent CLI or Explorer behavior that is not represented by source or tests. The current publishable module includes the typed runtime and translation text parser. The runtime loads locale resources, resolves fallbacks, renders parameters, plurals, formatters, and switch cases, validates JavaScript usage, and can synchronize resources with a remote endpoint.
+- **Runtime:** loads translations, tracks the active locale, and exposes the `i18n` API used by applications.
+- **CLI:** will compile JSON translations into TypeScript typings and download translations from the Explorer into local assets.
+- **Explorer:** will provide a self-hosted frontend and backend for managing and caching translations.
 
-The root `deno.jsonc` defines a workspace with two members:
+Do not invent CLI or Explorer behavior that is not represented by source or tests. The current publishable package includes the typed runtime and translation text parser. The runtime loads locale resources, resolves fallbacks, renders parameters, plurals, formatters, and switch cases, validates JavaScript usage, and can synchronize resources with a remote endpoint.
 
-- `module/`: the publishable `@deft-plus/i18n` package, public entry point, implementation, tests, package metadata, and package README.
-- `docs/`: project documentation.
+### Translation parser invariants
 
-The root `README.md` is a symlink to `module/README.md`. Edit `module/README.md`; do not replace the symlink with a separate file. Files under `.agents/` and `skills-lock.json` are agent-tooling metadata, not library source.
+- Preserve literal text exactly. Normalize or trim only syntax-bearing parameter, plural, formatter, and switch-case values.
+- Parse parameters from single braces. Parameters default to type `unknown`, may declare a type after `:`, and may be optional with `?`.
+- Preserve parameter transforms in declaration order. Plain pipe-delimited transforms are formatters; brace-delimited transforms are switch-case expressions.
+- Support escaped commas in switch-case values without creating a new case, and restore the literal comma in the parsed value.
+- Parse plurals from double braces and always produce an `other` value. Map one entry to `other`; two to `one` and `other`; three to `zero`, `one`, and `other`; and the full syntax to `zero`, `one`, `two`, `few`, `many`, and `other`.
+- A plural without an explicit key may reuse the most recent numeric parameter or plural key. Throw when no valid prior key exists; never produce an empty plural key silently.
+- Keep optional plural categories absent when they were not supplied. Preserve an intentionally empty `other` value.
+- When extending message syntax, test whitespace, empty values, escaping, adjacent expressions, malformed input, and prior-key inference interactions.
 
-## Commands
+### Runtime, CLI, and Explorer boundaries
+
+- Keep the runtime focused on loading translations, selecting locales, and resolving type-safe messages. Normal application execution must not depend on Explorer availability.
+- Treat generated translation typings as deterministic CLI build artifacts. Never weaken translation keys or parameter types.
+- Keep downloaded translation assets usable without network access.
+- Treat Explorer data as untrusted. Validate locale identifiers, translation keys, message syntax, and persisted values at the backend boundary.
+- Keep message syntax consistent across the runtime, CLI, and Explorer. Parser changes require checking every implemented producer and consumer.
+
+### Project documentation and publishing
+
+- Update `module/README.md` for installation, architecture, and common package usage.
+- Update the relevant page under `docs/` for detailed guidance when one exists.
+- Use `@deft-plus/i18n` in consumer examples.
+- Describe unimplemented Runtime, CLI, or Explorer capabilities as planned rather than available.
+- Keep package metadata, imports, and exports in `module/deno.jsonc`.
+- Commit `deno.lock` and keep it synchronized. CI uses `deno ci` and must reject a stale lockfile.
+- Publish to JSR with `deno publish`; the release workflow uses OIDC provenance.
+- Do not publish internal parser helpers or unfinished APIs merely to make tests import them.
+
+<!-- ====================================================================== -->
+<!-- END PROJECT-SPECIFIC INSTRUCTIONS.                                    -->
+<!-- Delete everything above this line when reusing only the conventions.  -->
+<!-- ====================================================================== -->
+
+---
+
+<!-- ====================================================================== -->
+<!-- SHARED CONVENTIONS: LOCKED                                             -->
+<!-- ====================================================================== -->
+
+# Shared project conventions
+
+## Locked-section policy
+
+Everything from the `SHARED CONVENTIONS: LOCKED` marker through the end of this file is immutable shared policy.
+
+- Agents and automated tools MUST NOT edit, delete, reorder, reformat, or append content inside this locked section.
+- Project-specific requirements, exceptions, paths, commands, and architecture belong only in the project-specific section above.
+- A task that changes source code, tests, documentation, configuration, or the project-specific section does not authorize changing this locked section.
+- Only an explicit user instruction to update the **locked shared conventions** authorizes edits here. General requests to update `AGENTS.md` are not sufficient authorization.
+- When copying this policy to another project, preserve this locked section verbatim and place the new project's instructions above its start marker.
+
+## Working principles
+
+- Read the nearest applicable `AGENTS.md` before changing files. More deeply nested instructions may add project-specific requirements but must not weaken this locked policy.
+- Inspect existing code, configuration, tests, and documentation before making assumptions.
+- Keep changes scoped to the request. Preserve unrelated work and do not rewrite user changes unnecessarily.
+- Prefer established project patterns over introducing a parallel convention.
+- Do not invent behavior that is absent from source, tests, or project-specific requirements.
+- Use informed, low-risk assumptions to continue working. Ask before making a choice that would materially change the requested result.
+
+### Repository layout
+
+- `module/` contains the publishable `@deft-plus/i18n` package, implementation, tests, metadata, and package README.
+- `module/mod.ts` is the only public package entry point. Export only intentional public APIs there.
+- `docs/` contains detailed project documentation.
+- `README.md` is a symlink to `module/README.md`. Edit `module/README.md`; never replace the symlink with a separate file.
+- `.agents/` and `skills-lock.json` contain agent tooling metadata, not library source.
+
+### Project commands
 
 Run commands from the repository root.
 
 ```bash
-deno ci                 # reproduce dependencies from deno.lock
-deno task fmt           # format source, configuration, and Markdown
-deno task lint          # lint and verify formatting
-deno task check         # type-check the public entry point and tests
-deno task test          # run tests and enforce 100% coverage
-deno task test:u        # run tests with the suite's update argument
-deno task jsdoc:lint    # validate public API documentation
+deno ci
+deno task fmt
+deno task lint
+deno task check
+deno task test
+deno task test:u
+deno task jsdoc:lint
 deno task jsdoc:generate
 deno publish --dry-run --allow-dirty
 ```
 
-Before completing a code change, run `deno task lint`, `deno task check`, and `deno task test`. Run `deno task jsdoc:lint` when changing exported or protected APIs. Use a publish dry run when changing exports, package metadata, dependencies, or published files.
+The test task enforces 100% coverage. Use the publish dry run when changing exports, package metadata, dependencies, or published files.
 
-Do not grant `-A` to routine commands. Add only the narrowest permission required by the behavior under test.
+## Deno toolchain and verification
+
+- Use the Deno version required by the repository. New Deno projects should use Deno 2.9 or newer.
+- Prefer configured repository tasks over ad hoc commands.
+- Use `deno ci` for reproducible CI installation when a lockfile is present.
+- Before completing a code change, run the configured formatting, linting, type-checking, and test tasks. For the standard task names, run `deno task lint`, `deno task check`, and `deno task test`.
+- Run the configured JSDoc lint task when changing exported or protected APIs.
+- Run `deno publish --dry-run --allow-dirty` when changing JSR exports, package metadata, dependencies, or published files.
+- If a project uses different task names, discover and run their equivalents rather than editing this shared section.
+- Do not grant `-A` to routine commands. Add only the narrowest permission required by the behavior being exercised.
+- Do not edit generated coverage or documentation output.
 
 ## Source and API conventions
 
-- `module/mod.ts` is the only public package entry point. Export intentional public APIs there; do not expose internal helpers accidentally.
-- Prefix genuinely internal implementation files with `_`; public source modules such as `runtime.ts`, `runtime_types.ts`, and `parser.ts` use descriptive names.
-- Keep tests beside their implementation and name them `*_test.ts`.
-- Use explicit `.ts` extensions for relative imports and use import-map aliases for JSR dependencies.
-- Use only one import declaration per module specifier. Combine runtime values and types in the same declaration with inline `type` modifiers, such as `import { createI18n, type I18n } from './mod.ts';`.
-- Preserve strict TypeScript types. Avoid `any`, non-null assertions, unchecked casts, and broad `Function` types unless the mapping genuinely requires them and the lint suppression explains why.
-- Use two-space indentation, single quotes, 100-column TypeScript formatting, and Deno's formatter. Markdown uses `proseWrap: never`.
-- Begin every TypeScript source file with the exact copyright header below, followed by a descriptive module-level JSDoc block containing `@module`. Describe the file's purpose rather than repeating its filename. For test and mod files just do the copyright header and a space after.
+- Keep a deliberate public entry point and export only intentional public APIs.
+- Prefix genuinely internal implementation files with `_`. Give public source modules descriptive names.
+- Use explicit `.ts` extensions for relative imports and configured aliases for package dependencies.
+- Use only one import declaration per module specifier. When an import contains values and types, combine them with inline `type` modifiers:
+
+  ```ts
+  import { createThing, type Thing } from './mod.ts';
+  ```
+
+- A module imported exclusively for types may use `import type`.
+- Preserve strict TypeScript types. Avoid `any`, non-null assertions, unchecked casts, and broad `Function` types unless they are genuinely required and a lint suppression explains why.
+- Use two-space indentation, single quotes, a 100-column TypeScript line width, and Deno's formatter. Keep Markdown prose unwrapped when the repository formatter is configured that way.
+- Avoid production dependencies for functionality already provided by Deno or the target platform.
+
+## File and JSDoc conventions
+
+- Begin every TypeScript source file with this exact copyright header:
 
   ```ts
   // Copyright the Deft+ authors. All rights reserved. Apache-2.0 license
+  ```
+
+- After the header, regular source files require a descriptive module-level JSDoc block containing `@module`. Explain the module's purpose, responsibilities, important exports, typical workflow, and relevant constraints in language any developer can understand. The explanation should be robust enough to understand how and why the module is used without reading its implementation, while remaining concise and avoiding unnecessary internal details. Modules that expose important user-facing behavior must include practical `@example` blocks for their primary APIs or use cases; examples are not required for every minor or internal helper. Never merely repeat the filename.
+
+  ````ts
+  // Copyright the Deft+ authors. All rights reserved. Apache-2.0 license
 
   /**
-   * Description of the file's purpose and the APIs or behavior it contains.
+   * Provides the public utilities for creating and using a typed resource.
+   *
+   * Use {@link createResource} to initialize the resource, then call its
+   * methods to read or update values. The module validates inputs before
+   * applying changes and reports invalid operations with {@link ResourceError}.
+   *
+   * @example Create and read a resource
+   * ```ts
+   * const resource = createResource({ name: 'Example' });
+   * console.log(resource.get('name'));
+   * ```
    *
    * @module
    */
-  ```
+  ````
 
-- Give complete JSDoc to the module's main functions and any declaration that is exported or may become part of the external API. Include behavior, parameters, returns, and a realistic example when one adds useful context. Keep public signatures free of private referenced types so `deno doc --lint` succeeds.
-- Order external API JSDoc content as follows: summary and details, `@example` when needed, `@template` tags, `@param` tags, and finally `@returns`.
-- Give examples a short title, such as `@example Usage`, and use a fenced `ts` code block.
-- Format every template tag as `@template T - Description.` and every parameter tag as `@param value - Description.`. The dash after the template or parameter name is required.
-- Format return tags as `@returns Description.` without a dash after `@returns`.
-- Keep JSDoc for internal functions simple and normally omit examples. Document their parameters and returns when present, then add `@internal` as the final tag, separated from `@returns` or the preceding content by one blank JSDoc line.
-- Give every top-level constant a very short JSDoc comment. Internal constants must use a multiline comment with the description and `@internal` on separate lines; never append `@internal` to a single-line JSDoc comment.
-- Document every class and interface, including each method and property. Use concise one-line JSDoc for self-explanatory members and complete external API JSDoc for members whose behavior consumers need to understand. End internal members with `@internal` following the same spacing rule.
+- Test files and the mod.ts file use only the copyright header followed by a blank line; they do not require module JSDoc.
+- Give complete JSDoc to main functions and declarations that are exported or may become external APIs. Include behavior, parameters, returns, and a realistic example when it adds useful context.
+- Keep public signatures free of private referenced types so documentation linting succeeds.
+- Order external API JSDoc as: summary and details, `@example` when useful, `@template`, `@param`, and finally `@returns`.
+- Title examples, such as `@example Usage`, and use a fenced `ts` code block.
+- Format template tags as `@template T - Description.` and parameter tags as `@param value - Description.`. Both require a dash after the name.
+- Format return tags as `@returns Description.` with no dash after `@returns`.
+- Keep internal-function JSDoc concise and normally omit examples. Document parameters and returns when present. Add `@internal` as the final tag, separated from the preceding content by one blank JSDoc line.
+- Give every top-level constant a short JSDoc comment. An internal constant requires a multiline comment with its description and `@internal` on separate lines; never append `@internal` to a single-line JSDoc comment.
+- Document every class and interface, including each method and property. Self-explanatory members may use concise one-line JSDoc. Consumer-facing behavior requires complete external API documentation.
+- End documentation for internal class or interface members with `@internal`.
 
   ````ts
   /**
-   * Description...
+   * Description of the public API.
    *
    * @example Usage
    * ```ts
-   * // Example in typescript...
+   * const result = createThing(value);
    * ```
    *
-   * @template T - Type information...
-   * @param value - Param information...
-   * @returns Return information...
+   * @template T - Type information.
+   * @param value - Parameter information.
+   * @returns Return information.
    */
   ````
 
   ```ts
   /**
-   * Description...
+   * Description of the internal function.
    *
-   * @param text - Param information...
-   * @returns Return information...
+   * @param text - Parameter information.
+   * @returns Return information.
    *
    * @internal
    */
   function remove(text: string): string {
-    // Impl...
+    // Implementation...
   }
 
   /**
-   * Description...
+   * Description of the internal constant.
    * @internal
    */
   const INTERNAL_CONST = 'internal';
 
-  /** Description... */
+  /** Description of the public constant. */
   const PUBLIC_CONST = 'public';
   ```
 
-## Translation parser invariants
-
-- Preserve literal text exactly. Only syntax-bearing parameter, plural, formatter, and switch-case values are normalized or trimmed.
-- Parse parameters from single braces. A parameter has a key, defaults to type `unknown`, may declare a type after `:`, and may be marked optional with `?`.
-- Preserve parameter transforms in declaration order. Plain pipe-delimited transforms are formatters; brace-delimited transforms are switch-case expressions.
-- Support escaped commas in switch-case values without splitting the escaped content into a new case. Restore the literal comma in the parsed value.
-- Parse plurals from double braces and always produce an `other` value. Map one entry to `other`; two to `one` and `other`; three to `zero`, `one`, and `other`; and the full syntax to `zero`, `one`, `two`, `few`, `many`, and `other`.
-- A plural without an explicit key may reuse the most recent numeric parameter or plural key. Throw when no valid prior key exists; never silently produce an empty plural key.
-- Keep optional plural categories absent when they were not supplied. Do not remove an intentionally empty `other` value.
-- When extending message syntax, add focused tests for whitespace, empty values, escaping, adjacent expressions, malformed input, and interactions with prior-key inference.
-
 ## Testing conventions
 
-- Register every case as an independent top-level `Deno.test`. Do not use test steps or `@std/testing/bdd`.
-- Use `@std/expect` for expectations and `@std/testing/mock` only when a spy or stub is needed.
+- Keep tests beside their implementation and name them `*_test.ts`.
+- Register every case as an independent top-level `Deno.test`. Do not use test steps or BDD wrappers.
+- Use `@std/expect` for expectations and `@std/testing/mock` only when a spy or stub is necessary.
 - Name tests `<function-or-method>() <behavior>`, such as `parseText() should parse a typed parameter`. Always include parentheses after the callable name.
 - Declare tests with `Deno.test(name, fn)` and use an arrow function for `fn`, including asynchronous cases.
-- Keep tests deterministic and isolated. Do not rely on ambient locale, timezone, environment variables, network access, or filesystem state unless the behavior explicitly requires it and the test controls it.
-- Assert complete parsed structures so changes to discriminants, keys, types, optionality, transforms, plural categories, and ordering are visible.
-- Cover both runtime behavior and public type expectations when changing an API contract.
-- For locale-sensitive behavior, specify the locale explicitly and include cases whose output genuinely differs by locale.
-- For CLI behavior, use temporary fixtures and verify generated TypeScript is deterministic, formatted, and type-checkable.
+- Keep tests deterministic and isolated. Do not depend on ambient locale, timezone, environment variables, network access, or filesystem state unless the behavior requires it and the test controls it.
+- Assert complete output structures when individual fields, discriminants, ordering, or optionality are part of the contract.
+- Cover runtime behavior and public compile-time expectations when changing a typed API.
+- For locale-sensitive behavior, set the locale explicitly and test output that genuinely differs by locale.
+- For generated output, use temporary fixtures and verify that results are deterministic, formatted, and type-checkable.
+- Add regression tests for every corrected bug and focused boundary tests for new syntax or behavior.
 
-## Runtime, CLI, and Explorer boundaries
+## Documentation and release hygiene
 
-- Keep the runtime focused on loading translations, selecting locales, and resolving type-safe messages. It must not depend on Explorer availability during normal application execution.
-- Treat generated translation typings as build artifacts of the CLI. Generation must be deterministic for identical JSON input and must not weaken translation keys or parameter types.
-- Keep local translation assets usable without network access after they have been downloaded.
-- Treat Explorer data as untrusted input at its backend boundary. Validate locale identifiers, translation keys, message syntax, and persisted values before making them available to the runtime or CLI.
-- Keep shared message syntax consistent across the runtime, CLI, and Explorer. Parser changes require checking every implemented producer and consumer of that syntax.
+- Update user documentation in the same change as user-visible behavior.
+- Keep examples, API names, configuration, and observed behavior synchronized with the implementation.
+- Update source JSDoc whenever an API contract changes.
+- Describe planned features as planned until they are implemented and tested.
+- Keep lockfiles synchronized and committed when the project tracks them.
+- Never publish internal helpers or unfinished APIs solely for test convenience.
+- Before handing off a change, report the verification performed and any checks that could not be run.
 
-## Documentation
-
-Update documentation in the same change as user-visible behavior:
-
-- `module/README.md` for installation, architecture overview, and common package usage.
-- The relevant page under `docs/` for detailed guides when one exists.
-- Source JSDoc for API contracts and generated reference documentation.
-
-Use `@deft-plus/i18n` in consumer examples. Keep translation syntax, API names, locale behavior, and generated-file examples synchronized with the implementation. Describe planned runtime, CLI, or Explorer features as planned rather than available until they exist in the repository.
-
-## Package and release rules
-
-- Keep package metadata, imports, and exports in `module/deno.jsonc`.
-- Commit `deno.lock` and keep it synchronized. CI uses `deno ci` and must fail on a stale lockfile.
-- Publishing targets JSR through `deno publish`; the release workflow uses OIDC provenance.
-- Do not edit generated `.coverage/` or `.deno-docs/` output.
-- Avoid adding production dependencies for functionality provided by Deno or the platform.
-- Do not publish internal parser helpers or unfinished runtime, CLI, or Explorer APIs merely to make tests import them.
+<!-- ====================================================================== -->
+<!-- END SHARED CONVENTIONS: LOCKED                                         -->
+<!-- ====================================================================== -->
