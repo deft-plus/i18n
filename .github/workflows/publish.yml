@@ -1,0 +1,38 @@
+name: Workspace Publish
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v4
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.x
+
+      - name: Verify dependencies
+        run: deno ci
+
+      - name: Lint and format
+        run: deno task lint
+
+      - name: Type-check
+        run: deno task check
+
+      - name: Test
+        run: deno task test
+
+      - name: Publish to JSR
+        run: deno publish
